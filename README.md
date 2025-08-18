@@ -54,3 +54,54 @@ fn function_name (parameter_1 : i32, parameter_2 : char) -> f64 {
 In function signatures, *you must declare the type of each parameter*. This is a deliberate decision in Rust’s design: requiring type annotations in function definitions means the compiler almost never needs you to use them elsewhere in the code to figure out what type you mean.
 
 ## Understanding Ownership
+
+**Safety is the Absence of Undefined Behavior**.
+
+The expression `&m1` uses the *ampersand* operator to create a reference to (or “borrow”) `m1`. **References are non-owning pointers**, because they do not own the data they point to.
+
+Dereferencing a pointer accesses its data. The dereference operator, written with an asterisk (`*`) can access the heap data.
+
+```rust
+let mut x: Box<i32> = Box::new(1);
+let a: i32 = *x;         // *x reads the heap value, so a = 1
+*x += 1;                 // *x on the left-side modifies the heap value,
+                         //     so x points to the value 2
+
+let r1: &Box<i32> = &x;  // r1 points to x on the stack
+let b: i32 = **r1;       // two dereferences get us to the heap value
+
+let r2: &i32 = &*x;      // r2 points to the heap value directly
+let c: i32 = *r2;    // so only one dereference is needed to read it
+```
+
+As seen above, the dereference operator on the right side reads the heap value, while on the left side it modified the heap value itself. You probably won’t see the dereference operator very often when you read Rust code. *Rust implicitly inserts dereferences and references in certain cases, **such as calling a method with the dot operator***.
+
+**Pointer Safety Principle**: data should never be aliased and mutated at the same time. Pointers are a powerful and dangerous feature because they enable aliasing. Aliasing is accessing the same data through different variables. On its own, aliasing is harmless. But combined with mutation, we have a recipe for disaster. One variable can “pull the rug out” from another variable in many ways, for example:
+
+- By deallocating the aliased data, leaving the other variable to point to deallocated memory.
+- By mutating the aliased data, invalidating runtime properties expected by the other variable.
+- By concurrently mutating the aliased data, causing a data race with nondeterministic behavior for the other variable.
+
+Data can be aliased. Data can be mutated. But data cannot be both aliased and mutated. For example, Rust enforces this principle for boxes (owned pointers) by disallowing aliasing. However, because references are non-owning pointers, they need different rules than boxes to ensure the Pointer Safety Principle. By design, references are meant to temporarily create aliases.
+
+The core idea behind the **borrow checker** is that variables have three kinds of permissions on their data:
+
+- Read (R): data can be copied to another location.
+- Write (W): data can be mutated.
+- Own (O): data can be moved or dropped.
+
+By default, a variable has read/own permissions (RO) on its data. *If a variable is annotated with `let mut`, then it also has the write permission (W)*. **The key idea is that references can temporarily remove these permissions**.
+
+Mutable references provide unique and non-owning access to data. Immutable references (`&mut`) permit aliasing but disallow mutation. However, it is also useful to temporarily provide mutable access to data without moving it. The first observation is what makes mutable references safe. Mutable references allow mutation but prevent aliasing.
+
+**References provide the ability to read and write data without consuming ownership of it. References are created with borrows (`&` and `&mut`) and used with dereferences (`*`), often implicitly.**
+
+### Fixing ownership errors
+
+Useful tips:
+
+- Functions should not mutate their inputs if the caller would not expect it.
+- It is very rare for Rust functions to take ownership of heap-owning data structures like `Vec` and `String`.
+- Borrows should be as short as possible and always happen before mutations.
+
+## Using Structs to Structure Related Data

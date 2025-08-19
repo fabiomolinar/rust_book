@@ -31,15 +31,15 @@ First, you aren’t allowed to use `mut` with `constants`. `Constants` aren’t 
 
 The last difference is that **constants may be set only to a constant expression**, not the result of a value that could only be computed at runtime.
 
-*Shadowing*: the other difference between `mut` and shadowing is that because we’re effectively creating a new variable when we use the let keyword again, we can change the type of the value but reuse the same name. 
+*Shadowing*: the other difference between `mut` and shadowing is that because we’re effectively creating a new variable when we use the let keyword again, we can change the type of the value but reuse the same name.
 
 ### Data types
 
-There are at least two data types subsets: scalar and compound. 
+There are at least two data types subsets: scalar and compound.
 
-Rust has four primary scalar `types`: `integers`, `floating-point numbers`, `Booleans`, and `characters`. Compound types can group multiple values into one type. 
+Rust has four primary scalar `types`: `integers`, `floating-point numbers`, `Booleans`, and `characters`. Compound types can group multiple values into one type.
 
-Rust has two primitive compound types: `tuples` and `arrays`. *Tuples have a fixed length*: once declared, they cannot grow or shrink in size. Unlike a `tuple`, every element of an `array` must have the same type. Unlike arrays in some other languages, *arrays in Rust have a fixed length*. **Arrays are useful when you want your data allocated on the stack**, the same as the other types we have seen so far, rather than the heap. 
+Rust has two primitive compound types: `tuples` and `arrays`. *Tuples have a fixed length*: once declared, they cannot grow or shrink in size. Unlike a `tuple`, every element of an `array` must have the same type. Unlike arrays in some other languages, *arrays in Rust have a fixed length*. **Arrays are useful when you want your data allocated on the stack**, the same as the other types we have seen so far, rather than the heap.
 
 A `vector` is a similar collection type provided by the standard library that *is allowed to grow or shrink in size because its contents live on the heap*. If you’re unsure whether to use an array or a vector, chances are you should use a vector. *However, arrays are more useful when you know the number of elements will not need to change*.
 
@@ -105,3 +105,7 @@ Useful tips:
 - Borrows should be as short as possible and always happen before mutations.
 
 ## Using Structs to Structure Related Data
+
+## Enums and Pattern Matching
+
+## Managing Growing Projects with Packages, Crates, and Modules.

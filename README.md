@@ -108,4 +108,4 @@ Useful tips:
 
 ## Enums and Pattern Matching
 
-## Managing Growing Projects with Packages, Crates, and Modules.
+## Managing Growing Projects with Packages, Crates, and Modules

@@ -233,3 +233,52 @@ So far we’ve covered the most idiomatic file paths the Rust compiler uses, but
 The main downside to the old style that uses files named *mod.rs* is that your project can end up with many files named *mod.rs*, which can *get confusing when you have them open in your editor at the same time*.
 
 ## Commom Collections
+
+## Error Handling
+
+Prefer `expect` over `unwrap`.
+
+### Propagating errors
+
+Use the `Result` struct to propagate errors by wrapping the function result in the `Result` struc and returning `Err` if the function fails. Example below.
+
+```rust
+use std::fs::File;
+use std::io::{self, Read};
+
+fn read_username_from_file() -> Result<String, io::Error> {
+    let username_file_result = File::open("hello.txt");
+
+    let mut username_file = match username_file_result {
+        Ok(file) => file,
+        Err(e) => return Err(e),
+    };
+
+    let mut username = String::new();
+
+    match username_file.read_to_string(&mut username) {
+        Ok(_) => Ok(username),
+        Err(e) => Err(e),
+    }
+}
+```
+
+But there is a shortcut to propagating errors. The `?` operator. The `?` placed after a `Result` value is defined to work in almost the same way as the match expressions shown in the code above. If the value of the `Result` is an `Ok`, the value inside the `Ok` will get returned from this expression, and the program will continue. If the value is an `Err`, the `Err` will be returned from the whole function as if we had used the return keyword so the error value gets propagated to the calling code. See example below.
+
+```rust
+use std::fs::File;
+use std::io::{self, Read};
+
+fn read_username_from_file() -> Result<String, io::Error> {
+    let mut username_file = File::open("hello.txt")?;
+    let mut username = String::new();
+    username_file.read_to_string(&mut username)?;
+    Ok(username)
+}
+```
+
+Note that you can use the `?` operator on a `Result` in a function that returns `Result`, and you can use the `?` operator on an `Option` in a function that returns `Option`, *but you can’t mix and match*.
+
+### To `panic!` or not to `panic!`
+
+So how do you decide when you should call `panic!` and when you should return `Result`? Returning `Result` is a good default choice when you’re defining a function that might fail.

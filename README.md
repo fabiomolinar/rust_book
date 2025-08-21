@@ -191,7 +191,7 @@ In contrast, if we make an `enum` public, all of its variants are then public. W
 
 ### Bringing paths into scope with the `use` keyword
 
-Adding `use` and a path in a scope is similar to creating a symbolic link in the filesystem. Note that `use` only creates the shortcut for the particular scope (`module`) in which the use occurs. 
+Adding `use` and a path in a scope is similar to creating a symbolic link in the filesystem. Note that `use` only creates the shortcut for the particular scope (`module`) in which the use occurs.
 
 To make use of `use` idiomatically: *Bringing the function’s parent module into scope with use means we have to specify the parent module when calling the function. Specifying the parent module when calling the function makes it clear that the function isn’t locally defined while still minimizing repetition of the full path. On the other hand, when bringing in structs, enums, and other items with use, it’s idiomatic to specify the full path*.
 
@@ -282,3 +282,75 @@ Note that you can use the `?` operator on a `Result` in a function that returns 
 ### To `panic!` or not to `panic!`
 
 So how do you decide when you should call `panic!` and when you should return `Result`? Returning `Result` is a good default choice when you’re defining a function that might fail.
+
+**It’s advisable to have your code panic when it’s possible that your code could end up in a bad state**. In this context, a bad state is when some assumption, guarantee, contract, or invariant has been broken, such as when invalid values, contradictory values, or missing values are passed to your code—plus one or more of the following:
+
+- The bad state is something that is unexpected, as opposed to something that will likely happen occasionally, like a user entering data in the wrong format.
+- Your code after this point needs to rely on not being in this bad state, rather than checking for the problem at every step.
+- There’s not a good way to encode this information in the types you use. We’ll work through an example of what we mean in “Encoding States and Behavior as Types” in Chapter 18.
+
+If someone calls your code and passes in values that don’t make sense, it’s best to return an error if you can so the user of the library can decide what they want to do in that case. However, in cases where continuing could be insecure or harmful, the best choice might be to call `panic!` and alert the person using your library to the bug in their code so they can fix it during development. Similarly, `panic!` is often appropriate if you’re calling external code that is out of your control and it returns an invalid state that you have no way of fixing.
+
+However, when failure is expected, it’s more appropriate to return a `Result` than to make a `panic!` call. Examples include a parser being given malformed data or an HTTP request returning a status that indicates you have hit a rate limit. In these cases, returning a `Result` indicates that failure is an expected possibility that the calling code must decide how to handle.
+
+## Generic Types, Traits, and Lifetimes
+
+### Generic data types
+
+We use generics to create definitions for items like *function signatures* or `structs`, which we can then use with many different concrete data types.
+
+To define a generic function, we place type name declarations inside **angle brackets**, `<>`, between the name of the function and the parameter list, like this: `fn my_fn<T>(list: &[T]) -> &T {`. This function declaration would read as: the function is generic over some type T. This function has one parameter named list, which is a slice of values of type T. The function will return a reference to a value of the same type T.
+
+We can also define `structs` to use a generic type parameter in one or more fields using the `<>` syntax. The example below defines `Point<T>` `struct` to hold x and y coordinate values of any type (and the types don't need to match in this example).
+
+```rust
+struct Point<T, U> {
+    x: T,
+    y: U,
+}
+```
+
+As we did with `structs`, we can define `enums` to hold generic data types in their variants. Example below:
+
+```rust
+enum Option<T> {
+    Some(T),
+    None,
+}
+// another one
+enum Result<T, E> {
+    Ok(T),
+    Err(E),
+}
+```
+
+In method definitions:
+
+```rust
+struct Point<T> {
+    x: T,
+    y: T,
+}
+
+impl<T> Point<T> {
+    fn x(&self) -> &T {
+        &self.x
+    }
+}
+```
+
+Note that we have to declare `T` just after `impl` so we can use `T` to specify that we’re implementing methods on the type `Point<T>`. By declaring `T` as a generic type after `impl`, Rust can identify that the type in the angle brackets in `Point` is a generic type rather than a concrete type.
+
+We can also specify constraints on generic types when defining methods on the type. We could, for example, implement methods only on `Point<f32>` instances rather than on `Point<T>` instances with any generic type. Below we use the concrete type f32, meaning we don’t declare any types after `impl`.
+
+```rust
+impl Point<f32> {
+    fn distance_from_origin(&self) -> f32 {
+        (self.x.powi(2) + self.y.powi(2)).sqrt()
+    }
+}
+```
+
+This code means the type `Point<f32>` will have a `distance_from_origin` method; other instances of `Point<T>` where `T` is not of type `f32` will not have this method defined.
+
+### Traits

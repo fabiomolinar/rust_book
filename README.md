@@ -579,3 +579,20 @@ We can also write tests that use `Result<T, E>`! Return `Ok(())` if test pass, o
 In Rust, **integration tests are entirely external to your library**. *They use your library in the same way any other code would, which means they can only call functions that are part of your library’s **public API***. Their purpose is to test whether many parts of your library work together correctly. Units of code that work correctly on their own could have problems when integrated, so test coverage of the integrated code is important as well. To create integration tests, you first need a *tests* directory.
 
 We create a tests directory at the top level of our project directory, next to src. Cargo knows to look for integration test files in this directory. We can then make as many test files as we want, and Cargo will compile each of the files as an individual crate.
+
+## An I/O Project
+
+The organizational problem of allocating responsibility for multiple tasks to the main function is common to many binary projects. As a result, **the Rust community has developed guidelines for splitting the separate concerns of a binary program** when `main` starts getting large. This process has the following steps:
+
+- Split your program into a *main.rs* file and a *lib.rs* file and move your program’s logic to *lib.rs*.
+- As long as your command line parsing logic is small, it can remain in *main.rs*.
+- When the command line parsing logic starts getting complicated, extract it from *main.rs* and move it to *lib.rs*.
+
+The responsibilities that remain in the `main` function after this process should be limited to the following:
+
+- Calling the command line parsing logic with the argument values
+- Setting up any other configuration
+- Calling a `run` function in *lib.rs*
+- Handling the error if run returns an error
+
+This pattern is about separating concerns: *main.rs* **handles running the program** and *lib.rs* **handles all the logic of the task at hand**. Because you can’t test the `main` function directly, this structure lets you test all of your program’s logic by moving it into functions in *lib.rs*. The code that remains in *main.rs* will be small enough to verify its correctness by reading it.

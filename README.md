@@ -354,3 +354,228 @@ impl Point<f32> {
 This code means the type `Point<f32>` will have a `distance_from_origin` method; other instances of `Point<T>` where `T` is not of type `f32` will not have this method defined.
 
 ### Traits
+
+A *trait* defines the functionality a particular type has and can share with other types. We can use *traits* to define shared behavior in an abstract way. We can use **trait bounds** to specify that a generic type can be any type that has certain behavior.
+
+### Defining a trait
+
+A type’s behavior consists of the methods we can call on that type. Different types share the same behavior if we can call the same methods on all of those types. Trait definitions are a way to group method signatures together to define a set of behaviors necessary to accomplish some purpose.
+
+We declare a *trait* using the `trait` keyword and then the *trait*’s name. See example below for a *trait* called `Summary`.
+
+```rust
+pub trait Summary {
+    fn summarize(&self) -> String;
+}
+```
+
+Inside the curly brackets, we declare the method signatures that describe the behaviors of the types that implement this trait.
+
+### Implementing a trait on a type
+
+Implementing a trait on a type is similar to implementing regular methods. The difference is that after `impl`, we put the trait name we want to implement, then use the `for` keyword, and then specify the name of the type we want to implement the trait for. Within the `impl` block, we put the method signatures that the trait definition has defined. Instead of adding a semicolon after each signature, we use curly brackets and fill in the method body with the specific behavior that we want the methods of the trait to have for the particular type. See example below.
+
+```rust
+pub struct NewsArticle {
+    pub headline: String,
+    pub location: String,
+    pub author: String,
+    pub content: String,
+}
+
+impl Summary for NewsArticle {
+    fn summarize(&self) -> String {
+        format!("{}, by {} ({})", self.headline, self.author, self.location)
+    }
+}
+```
+
+Users of a crate can call the trait methods in the same way we call regular methods. *The only difference is that the user must bring **the trait into scope** as well as the types*.
+
+One restriction to note is that *we can implement a trait on a type only if **either the trait or the type, or both, are local to our crate***.
+
+### Default implementations
+
+It's enough to provide the implementation in the trait definition. Then, when implementing it, just don't provide one. See example below.
+
+```rust
+pub trait Summary {
+    fn summarize(&self) -> String {
+        String::from("(Read more...)")
+    }
+}
+
+impl Summary for NewsArticle {};
+```
+
+### Traits as parameters
+
+Functions that accept many different types can take advantage of traits and use them as input parameters. See example below.
+
+```rust
+pub fn notify(item: &impl Summary) {
+    println!("Breaking news! {}", item.summarize());
+}
+```
+
+The function above takes any type that implements `Summary`. However, the code above is really just syntax sugar for *trait bounds*. See same example below:
+
+```rust
+pub fn notify<T: Summary>(item: &T) {
+    println!("Breaking news! {}", item.summarize());
+}
+```
+
+We place trait bounds with the declaration of the generic type parameter after a colon and inside angle brackets.
+
+### Specifying multiple trait bounds with the `+` syntax
+
+We can also specify more than one trait bound. Say we wanted `notify` to use display formatting as well as `summarize` on `item`: we specify in the `notify` definition that `item` must implement both `Display` and `Summary`. We can do so using the `+` syntax. See example below.
+
+```rust
+pub fn notify(item: &(impl Summary + Display)) {...}
+// Using trait bounds
+pub fn notify<T: Summary + Display>(item: &T) {...}
+```
+
+Using too many trait bounds has its downsides. Each generic has its own trait bounds, so functions with multiple generic type parameters can contain lots of trait bound information between the function’s name and its parameter list, making the function signature hard to read. For this reason, Rust has alternate syntax for specifying trait bounds inside a `where` clause after the function signature. So, instead of writing this: `fn some_function<T: Display + Clone, U: Clone + Debug>(t: &T, u: &U) -> i32 {...}`, we can use a `where` clause, like this:
+
+```rust
+fn some_function<T, U>(t: &T, u: &U) -> i32
+where
+    T: Display + Clone,
+    U: Clone + Debug,
+{...}
+```
+
+### Returning types that implement traits
+
+We can also use the impl Trait syntax in the return position to return a value of some type that implements a trait. Example: `fn returns_summarizable() -> impl Summary {`.
+
+### Using trait bounds to conditionally implement methods
+
+We can also conditionally implement a trait for any type that implements another trait. Implementations of a trait on any type that satisfies the trait bounds are called *blanket implementations*.
+
+For example, the standard library implements the `ToString` trait on any type that implements the `Display` trait. The `impl` block in the standard library looks similar to this code:
+
+```rust
+impl<T: Display> ToString for T {
+    // --snip--
+}
+```
+
+### Validating references with lifetimes
+
+Rather than ensuring that a type has the behavior we want, **lifetimes ensure that references are valid as long as we need them to be**. We have to annotate lifetimes when the lifetimes of references could be related in a few different ways. Rust requires us to annotate the relationships using generic lifetime parameters to ensure the actual references used at runtime will definitely be valid.
+
+### Generic lifetimes in functions
+
+Lifetime annotations have a slightly unusual syntax: the names of lifetime parameters must start with an apostrophe (`'`) and are usually all lowercase and very short, like generic types. Most people use the name `'a` for the first lifetime annotation. We place lifetime parameter annotations after the `&` of a reference, using a space to separate the annotation from the reference’s type. Here are some examples:
+
+```rust
+&i32        // a reference
+&'a i32     // a reference with an explicit lifetime
+&'a mut i32 // a mutable reference with an explicit lifetime
+```
+
+To use lifetime annotations in function signatures, we need to declare the generic lifetime parameters inside angle brackets between the function name and the parameter list, just as we did with generic type parameters.
+
+We want the signature to express the following constraint: the returned reference will be valid as long as both the parameters are valid. This is the relationship between lifetimes of the parameters and the return value.
+
+```rust
+fn longest<'a>(x: &'a str, y: &'a str) -> &'a str {
+    if x.len() > y.len() { x } else { y }
+}
+```
+
+The function signature now tells Rust that for some lifetime `'a`, the function takes two parameters, both of which are string slices that live at least as long as lifetime `'a`. The function signature also tells Rust that the string slice returned from the function will live at least as long as lifetime `'a`. In practice, it means that the lifetime of the reference returned by the longest function is the same as the smaller of the lifetimes of the values referred to by the function arguments.
+
+Remember, *when we specify the lifetime parameters in this function signature, **we’re not changing the lifetimes of any values passed in or returned**. Rather, we’re specifying that the borrow checker should reject any values that don’t adhere to these constraints*.
+
+### Thinking in terms of lifetimes
+
+When returning a reference from a function, *the lifetime parameter for the return type needs to match the lifetime parameter for one of the parameters*. When facing issues with return values lifetime on a function, think if it's not possible to return ownership of the value instead of a reference to the value so that the calling function would have to handle the lifetime of the returned value.
+
+### Lifetime annotations in `struct` definitions
+
+So far, the `structs` we’ve defined all hold owned types. We can define `structs` to hold references, but in that case we would need to add a lifetime annotation on every reference in the struct’s definition. Example:
+
+```rust
+struct ImportantExcerpt<'a> {
+    part: &'a str,
+}
+```
+
+### Lifetime Elision
+
+The compiler uses three rules to figure out the lifetimes of the references when there aren’t explicit annotations. The first rule applies to input lifetimes, and the second and third rules apply to output lifetimes. If the compiler gets to the end of the three rules and there are still references for which it can’t figure out lifetimes, the compiler will stop with an error. These rules apply to `fn` definitions as well as `impl` blocks.
+
+1. The first rule is that the compiler assigns a different lifetime parameter to each lifetime in each input type. References like `&'_ i32` need a lifetime parameter, and structures like `MyStruct<'_>` need a lifetime parameter.
+2. The second rule is that, if there is exactly one input lifetime parameter, that lifetime is assigned to all output lifetime parameters: `fn foo<'a>(x: &'a i32) -> &'a i32`.
+3. The third rule is that, if there are multiple input lifetime parameters, but one of them is `&self` or `&mut self` because this is a method, the lifetime of self is assigned to all output lifetime parameters.
+
+### The `static` lifetime
+
+One special lifetime we need to discuss is `'static`, which denotes that the affected reference can live for the entire duration of the program. All string literals have the `'static` lifetime, which we can annotate as follows: `let s: &'static str = "I have a static lifetime.";`.
+
+You might see suggestions in error messages to use the `'static` lifetime. But before specifying `'static` as the lifetime for a reference, think about whether the reference you have actually lives the entire lifetime of your program or not, and whether you want it to. Most of the time, an error message suggesting the `'static` lifetime results from attempting to create a dangling reference or a mismatch of the available lifetimes. In such cases, the solution is to fix those problems, not to specify the `'static` lifetime.
+
+### generic type parameters, trait bounds, and lifetimes together
+
+Let’s briefly look at the syntax of specifying generic type parameters, trait bounds, and lifetimes all in one function!
+
+```rust
+use std::fmt::Display;
+
+fn longest_with_an_announcement<'a, T>(
+    x: &'a str,
+    y: &'a str,
+    ann: T,
+) -> &'a str
+where
+    T: Display,
+{
+    println!("Announcement! {ann}");
+    if x.len() > y.len() { x } else { y }
+}
+```
+
+## Writing Automated Tests
+
+The bodies of test functions typically perform these three actions:
+
+- Set up any needed data or state.
+- Run the code you want to test.
+- Assert that the results are what you expect.
+
+Let’s look at the features Rust provides specifically for writing tests that take these actions, which include the `test` attribute, a few `macros`, and the `should_panic` attribute.
+
+### The anatomy of a test function
+
+To change a function into a test function, add `#[test]` on the line before `fn`. When you run your tests with the `cargo test` command, Rust builds a test runner binary that runs the annotated functions and reports on whether each test function passes or fails.
+
+### Checking results with `assert!`
+
+The `assert!` macro, provided by the standard library, is useful when you want to ensure that some condition in a test evaluates to true.
+
+A common way to verify functionality is to test for equality between the result of the code under test and the value you expect the code to return. You could do this by using the `assert!` macro and passing it an expression using the `==` operator. However, this is such a common test that the standard library provides a pair of macros—`assert_eq!` and `assert_ne!`—to perform this test more conveniently. These macros compare two arguments for equality or inequality, respectively.
+
+You can also add a custom message to be printed with the failure message as optional arguments to the `assert!`, `assert_eq!`, and `assert_ne!` macros.
+
+### Checking for panics
+
+In addition to checking return values, it’s important to check that our code handles error conditions as we expect. We do this by adding the attribute `should_panic` to our test function. We place the `#[should_panic]` attribute after the `#[test]` attribute and before the test function it applies to. To make `should_panic` tests more precise, we can add an optional expected parameter to the `should_panic` attribute. The test harness will make sure that the failure message contains the provided text.
+
+### Using `Result`
+
+We can also write tests that use `Result<T, E>`! Return `Ok(())` if test pass, or `Err("test failed explanation string")` if it fails.
+
+### Controlling how tests are run
+
+`cargo test` compiles your code **in test mode** and runs the resultant test binary. The default behavior of the binary produced by `cargo test` is to *run all the tests in parallel and capture output generated during test runs*, preventing the output from being displayed and making it easier to read the output related to the test results. You can, however, specify command line options to change this default behavior.
+
+### Integration tests
+
+In Rust, **integration tests are entirely external to your library**. *They use your library in the same way any other code would, which means they can only call functions that are part of your library’s **public API***. Their purpose is to test whether many parts of your library work together correctly. Units of code that work correctly on their own could have problems when integrated, so test coverage of the integrated code is important as well. To create integration tests, you first need a *tests* directory.
+
+We create a tests directory at the top level of our project directory, next to src. Cargo knows to look for integration test files in this directory. We can then make as many test files as we want, and Cargo will compile each of the files as an individual crate.

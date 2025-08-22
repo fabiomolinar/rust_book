@@ -596,3 +596,7 @@ The responsibilities that remain in the `main` function after this process shoul
 - Handling the error if run returns an error
 
 This pattern is about separating concerns: *main.rs* **handles running the program** and *lib.rs* **handles all the logic of the task at hand**. Because you can’t test the `main` function directly, this structure lets you test all of your program’s logic by moving it into functions in *lib.rs*. The code that remains in *main.rs* will be small enough to verify its correctness by reading it.
+
+## Iterators and Closures
+
+Rust’s closures are anonymous functions you can save in a variable or pass as arguments to other functions. Unlike functions, **closures can capture values from the scope in which they’re defined**.

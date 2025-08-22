@@ -2,6 +2,8 @@
 
 Repository for the exercises on the Rust book.
 
+Source: [Link to book](https://rust-book.cs.brown.edu/experiment-intro.html).
+
 ## Chapter 1 - Getting Started
 
 Rust is a statically typed language, which means that it must know the types of all variables at compile time.

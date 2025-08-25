@@ -602,3 +602,53 @@ This pattern is about separating concerns: *main.rs* **handles running the progr
 ## Iterators and Closures
 
 Rust’s closures are anonymous functions you can save in a variable or pass as arguments to other functions. Unlike functions, **closures can capture values from the scope in which they’re defined**.
+
+### Capturing references or moving ownership
+
+Closures can capture values from their environment in three ways, which directly map to the three ways a function can take a parameter: borrowing immutably, borrowing mutably, and taking ownership. *The closure will decide which of these to use based on what the body of the function does with the captured values*.
+
+If you want to force the closure to take ownership of the values it uses in the environment even though the body of the closure doesn’t strictly need ownership, you can use the `move` keyword before the parameter list. **This technique is mostly useful when passing a closure to a new thread to move the data so that it’s owned by the new thread**.
+
+A closure body can do any of the following: move a captured value out of the closure, mutate the captured value, neither move nor mutate the value, or capture nothing from the environment to begin with.
+
+Closures will automatically implement one, two, or all three of the `Fn` traits, in an additive fashion, depending on how the closure’s body handles the values:
+
+- `FnOnce` *applies to closures that can be called once*. All closures implement at least this trait because all closures can be called. **A closure that moves captured values out of its body will only implement `FnOnce` and none of the other `Fn` traits, because it can only be called once**.
+- `FnMut` *applies to closures that don’t move captured values out of their body, but that might mutate the captured values*. These closures can be called more than once.
+- `Fn` *applies to closures that don’t move captured values out of their body and that don’t mutate captured values, as well as closures that capture nothing from their environment*. These closures can be called more than once without mutating their environment, which is important in cases such as calling a closure multiple times concurrently.
+
+### Processing a series of items with iterators
+
+In Rust, *iterators are lazy*, meaning they have no effect until you call methods that consume the iterator to use it up. That's why we need to use methods (called `closures`) which consume them (e.g., `collect`).
+
+## More About Cargo and Crates.io
+
+Cargo can:
+
+- Customize your build through release profiles
+- Publish libraries on crates.io
+- Organize large projects with workspaces
+- Install binaries from crates.io
+- Extend Cargo using custom commands
+
+### Release profiles
+
+Cargo has two main profiles: the `dev` profile Cargo uses when you run `cargo build` and the `release` profile Cargo uses when you run `cargo build --release`. The `dev` profile is defined with good defaults for development, and the `release` profile has good defaults for release builds.
+
+Cargo has default settings for each of the profiles that apply when you haven’t explicitly added any `[profile.*]` sections in the project’s `Cargo.toml` file. By adding `[profile.*]` sections for any profile you want to customize, you override any subset of the default settings. Example:
+
+```toml
+[profile.dev]
+opt-level = 0
+
+[profile.release]
+opt-level = 3
+```
+
+You can override a default setting by adding a different value for it in `Cargo.toml`.
+
+### Workspaces
+
+A workspace is a set of packages that share the same `Cargo.lock` and output directory.
+
+## Smart Pointers

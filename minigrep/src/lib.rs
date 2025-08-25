@@ -9,23 +9,30 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn build(args: &[String]) -> Result<Config, &'static str> {
-        if args.len() < 3 {
-            return Err("Please provide enough arguments representing query and file-path");
-        }
+    pub fn build(
+        mut args: impl Iterator<Item = String>,
+    ) -> Result<Config, &'static str> {
+        args.next();
 
-        let query = args[1].clone();
-        let file_path = args[2].clone();
+        let query = match args.next() {
+            Some(arg) => arg,
+            None => return Err("Didn't get a query string"),
+        };
+
+        let file_path = match args.next() {
+            Some(arg) => arg,
+            None => return Err("Didn't get a file path"),
+        };
 
         let ignore_case = env::var("IGNORE_CASE").is_ok();
 
         Ok(Config {
-            query: query,
-            file_path: file_path,
-            ignore_case: ignore_case,
+            query,
+            file_path,
+            ignore_case,
         })
     }
-}
+}}
 
 #[derive(Debug, PartialEq)]
 pub struct Line<'a> {
@@ -48,45 +55,13 @@ pub fn run(config: Config) -> Result<(), Box<dyn StdError>> {
 }
 
 
-fn search<'a>(query: &str, contents: &'a str, formatter: impl Fn(&str) -> String) -> Vec<Line<'a>> {
-    let query_formatted = formatter(query);
-    let query_len = query_formatted.len();
-
-    let mut result: Vec<Line<'a>> = vec![];
-    let mut row: u32 = 1;
-
-    for line in contents.lines() {
-        let mut column = query_len;
-
-        loop {
-            if column > line.len() {
-                break;
-            }
-
-            let start = column - query_len;
-            let sliced = formatter(&line[start..column]);
-            let is_matched = sliced.contains(&query_formatted);
-
-            column += 1;
-
-            if !is_matched {
-                continue;
-            }
-
-            result.push(Line {
-                row: row,
-                col: start + 1,
-                text: &line,
-            });
-
-            break;
-        }
-
-        row += 1;
-    }
-
-    result
+pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
+    contents
+        .lines()
+        .filter(|line| line.contains(query))
+        .collect()
 }
+
 
 fn formatter(config: &Config) -> impl Fn(&str) -> String {
     match config.ignore_case {
